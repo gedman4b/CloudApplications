@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Configuration;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading;
 
@@ -73,6 +74,39 @@ namespace AWSS3Access
                     Console.WriteLine("An Error, number {0}, occurred when creating a bucket with the message '{1}", amazonS3Exception.ErrorCode, amazonS3Exception.Message);
                 }
             }
+        }
+
+        /// <summary>
+        /// Writes objects to a bucket
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="keyNames"></param>
+        /// <returns></returns>
+        public bool WritingObjects(string bucketName, List<string> keyNames)
+        {
+            bool result = false;
+            try
+            {
+                foreach(var file in keyNames)
+                {
+                    result = WritingAnObject(bucketName, file);
+                }
+            }
+            catch (AmazonS3Exception amazonS3Exception)
+            {
+                if (amazonS3Exception.ErrorCode != null &&
+                    (amazonS3Exception.ErrorCode.Equals("InvalidAccessKeyId") ||
+                    amazonS3Exception.ErrorCode.Equals("InvalidSecurity")))
+                {
+                    Console.WriteLine("Please check the provided AWS Credentials.");
+                    Console.WriteLine("If you haven't signed up for Amazon S3, please visit http://aws.amazon.com/s3");
+                }
+                else
+                {
+                    Console.WriteLine("An error occurred with the message '{0}' when writing objects", amazonS3Exception.Message);
+                }
+            }
+            return result;
         }
 
         /// <summary>
@@ -187,6 +221,39 @@ namespace AWSS3Access
                 }
             }
             return result;
+        }
+
+        /// <summary>
+        /// Retrieves objects from a bucket
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="keyNames"></param>
+        /// <returns></returns>
+        public List<byte[]> GetObjects(string bucketName, List<string> keyNames)
+        {
+            List<byte[]> bytesList = new List<byte[]>();
+            try
+            {
+                foreach (var file in keyNames)
+                {
+                    bytesList.Add(GetAnObject(bucketName, file));
+                }
+            }
+            catch (AmazonS3Exception amazonS3Exception)
+            {
+                if (amazonS3Exception.ErrorCode != null &&
+                    (amazonS3Exception.ErrorCode.Equals("InvalidAccessKeyId") ||
+                    amazonS3Exception.ErrorCode.Equals("InvalidSecurity")))
+                {
+                    Console.WriteLine("Please check the provided AWS Credentials.");
+                    Console.WriteLine("If you haven't signed up for Amazon S3, please visit http://aws.amazon.com/s3");
+                }
+                else
+                {
+                    Console.WriteLine("An error occurred with the message '{0}' when retrieving objects", amazonS3Exception.Message);
+                }
+            }
+            return bytesList;
         }
 
         /// <summary>
