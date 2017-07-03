@@ -2,6 +2,7 @@
 using System.IO;
 using System.Configuration;
 using System.Collections.Specialized;
+using System.Threading;
 
 using Amazon;
 using Amazon.S3;
@@ -19,6 +20,9 @@ namespace AWSS3Access
             client = new AmazonS3Client(appConfig["AWSAccessKey"], appConfig["AWSSecretAccessKey"], RegionEndpoint.USEast1);
         }
 
+        /// <summary>
+        /// Lists buckets from an S3 account
+        /// </summary>
         public void ListingBuckets()
         {
             try
@@ -45,6 +49,10 @@ namespace AWSS3Access
             }
         }
 
+        /// <summary>
+        /// Creates a bucket
+        /// </summary>
+        /// <param name="bucketName"></param>
         public void CreateABucket(string bucketName)
         {
             try
@@ -67,6 +75,12 @@ namespace AWSS3Access
             }
         }
 
+        /// <summary>
+        /// Writes an object to a bucket
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="keyName"></param>
+        /// <returns></returns>
         public bool WritingAnObject(string bucketName, string keyName)
         {
             bool result = false;
@@ -103,44 +117,127 @@ namespace AWSS3Access
             return result;
         }
 
-        public byte[] GetAnObject(string bucketName, string keyName)
+        /// <summary>
+        /// Writes an object to a bucket Asynchronously
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="keyName"></param>
+        /// <param name="async"></param>
+        public bool WritingAnObject(string bucketName, string keyName, IAsyncResult asyncResult)
         {
-            byte[] fileBytes = null;
+            bool result = false;
             try
             {
-                GetObjectRequest request = new GetObjectRequest()
+                PutObjectRequest request = new PutObjectRequest
                 {
                     BucketName = bucketName,
-                    Key = keyName
+                    Key = keyName,
+                    ContentBody = "This is sample content..."
                 };
 
-                using (GetObjectResponse response = client.GetObject(request))
+                PutObjectResponse response = client.PutObject(request);
+                Console.WriteLine("Finished PutObject operation for {0}.", request.Key);
+                Console.WriteLine("Service Response:");
+                Console.WriteLine("-----------------");
+                Console.WriteLine("{0}", response);
+                Console.Write("\n\n");
+
+                request.Key = "Item1";
+                asyncResult = client.BeginPutObject(request, null, null);
+                while (!asyncResult.IsCompleted)
                 {
-                    using (Stream responseStream = response.ResponseStream)
-                    {
-                        string title = response.Metadata["x-amz-meta-title"];
-                        Console.WriteLine("The object's title is: {0}", title);
-                        fileBytes = StreamToByteArray(responseStream);
-                    }
+                    //
+                    // Do some work here
+                    //
                 }
+            
+                response = client.EndPutObject(asyncResult);
+                
+                Console.WriteLine("Finished Async PutObject operation for {0}.", request.Key);
+                Console.WriteLine("Service Response:");
+                Console.WriteLine("-----------------");
+                Console.WriteLine(response);
+                Console.Write("\n\n");
+
+                request.Key = "Item2";
+                asyncResult = client.BeginPutObject(request, AsyncCallback.SimpleCallback, null);
+
+                request.Key = "Item3";
+                asyncResult = client.BeginPutObject(request, AsyncCallback.CallbackWithClient, client);
+
+                request.Key = "Item4";
+                asyncResult = client.BeginPutObject(request, AsyncCallback.CallbackWithState,
+                   new ClientState { Client = (AmazonS3Client)client, Start = DateTime.Now });
+
+                Thread.Sleep(TimeSpan.FromSeconds(5));
+                result = true;
             }
-            catch (AmazonS3Exception amazonS3Exception)
+            catch (AmazonS3Exception s3Exception)
             {
-                if (amazonS3Exception.ErrorCode != null &&
-                    (amazonS3Exception.ErrorCode.Equals("InvalidAccessKeyId") ||
-                    amazonS3Exception.ErrorCode.Equals("InvalidSecurity")))
+                if (s3Exception.ErrorCode != null &&
+                     (s3Exception.ErrorCode.Equals("InvalidAccessKeyId") ||
+                     s3Exception.ErrorCode.Equals("InvalidSecurity")))
                 {
                     Console.WriteLine("Please check the provided AWS Credentials.");
                     Console.WriteLine("If you haven't signed up for Amazon S3, please visit http://aws.amazon.com/s3");
                 }
                 else
                 {
-                    Console.WriteLine("An error occurred with the message '{0}' when reading an object", amazonS3Exception.Message);
+                    Console.WriteLine("An error occurred with the message '{0}' when performing a CallbackWithClient", s3Exception.Message);
                 }
             }
-            return fileBytes;
+            return result;
         }
 
+        /// <summary>
+        /// Retrieves and object from a bucket
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="keyName"></param>
+        /// <returns></returns>
+        public byte[] GetAnObject(string bucketName, string keyName)
+            {
+                byte[] fileBytes = null;
+                try
+                {
+                    GetObjectRequest request = new GetObjectRequest()
+                    {
+                        BucketName = bucketName,
+                        Key = keyName
+                    };
+
+                    using (GetObjectResponse response = client.GetObject(request))
+                    {
+                        using (Stream responseStream = response.ResponseStream)
+                        {
+                            string title = response.Metadata["x-amz-meta-title"];
+                            Console.WriteLine("The object's title is: {0}", title);
+                            fileBytes = StreamToByteArray(responseStream);
+                        }
+                    }
+                }
+                catch (AmazonS3Exception amazonS3Exception)
+                {
+                    if (amazonS3Exception.ErrorCode != null &&
+                        (amazonS3Exception.ErrorCode.Equals("InvalidAccessKeyId") ||
+                        amazonS3Exception.ErrorCode.Equals("InvalidSecurity")))
+                    {
+                        Console.WriteLine("Please check the provided AWS Credentials.");
+                        Console.WriteLine("If you haven't signed up for Amazon S3, please visit http://aws.amazon.com/s3");
+                    }
+                    else
+                    {
+                        Console.WriteLine("An error occurred with the message '{0}' when reading an object", amazonS3Exception.Message);
+                    }
+                }
+                return fileBytes;
+            }
+
+        /// <summary>
+        /// Deletes an object from a bucket
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="keyName"></param>
         public void DeletingAnObject(string bucketName, string keyName)
         {
             try
@@ -168,6 +265,11 @@ namespace AWSS3Access
                 }
             }
         }
+
+        /// <summary>
+        /// Lists objects from a bucket
+        /// </summary>
+        /// <param name="bucketName"></param>
         public void ListingObjects(string bucketName)
         {
             try
@@ -194,7 +296,11 @@ namespace AWSS3Access
             }
         }
 
-        // To make up for Amazon AWS Read all bytes shortcoming
+        /// <summary>
+        /// To make up for Amazon AWS Read all bytes shortcoming
+        /// </summary>
+        /// <param name="inputStream"></param>
+        /// <returns></returns>
         private byte[] StreamToByteArray(Stream inputStream)
         {
             byte[] bytes = new byte[inputStream.Length];  
