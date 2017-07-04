@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading;
 
-using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
 
@@ -18,7 +17,12 @@ namespace AWSS3Storage
         public S3Storage()
         {
             NameValueCollection appConfig = ConfigurationManager.AppSettings;
-            S3Client = new AmazonS3Client(appConfig["AWSAccessKey"], appConfig["AWSSecretAccessKey"], RegionEndpoint.USEast1);
+            S3Client = new AmazonS3Client(appConfig["AWSAccessKey"], appConfig["AWSSecretAccessKey"], appConfig["AWSRegion"]);
+        }
+
+        public S3Storage(string AccessKey, string SecretAccessKey, string Region)
+        {
+            S3Client = new AmazonS3Client(AccessKey, SecretAccessKey, Region);
         }
 
         /// <summary>
