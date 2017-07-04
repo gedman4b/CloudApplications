@@ -3,7 +3,7 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 
-namespace AWSS3Access
+namespace AWSS3Storage
 {
     public static class AsyncCallback
     {

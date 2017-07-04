@@ -2,7 +2,7 @@
 
 using Amazon.S3;
 
-namespace AWSS3Access
+namespace AWSS3Storage
 {
     public class ClientState
     {

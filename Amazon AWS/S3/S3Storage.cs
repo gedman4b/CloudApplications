@@ -9,16 +9,16 @@ using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
 
-namespace AWSS3Access
+namespace AWSS3Storage
 {
     public class S3Storage
     {
-        private IAmazonS3 client;
+        public AmazonS3Client S3Client { get; set; }
 
         public S3Storage()
         {
             NameValueCollection appConfig = ConfigurationManager.AppSettings;
-            client = new AmazonS3Client(appConfig["AWSAccessKey"], appConfig["AWSSecretAccessKey"], RegionEndpoint.USEast1);
+            S3Client = new AmazonS3Client(appConfig["AWSAccessKey"], appConfig["AWSSecretAccessKey"], RegionEndpoint.USEast1);
         }
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace AWSS3Access
         {
             try
             {
-                ListBucketsResponse response = client.ListBuckets();
+                ListBucketsResponse response = S3Client.ListBuckets();
                 foreach (S3Bucket bucket in response.Buckets)
                 {
                     Console.WriteLine("You own Bucket with name: {0}", bucket.BucketName);
@@ -60,7 +60,7 @@ namespace AWSS3Access
             {
                 PutBucketRequest request = new PutBucketRequest();
                 request.BucketName = bucketName;
-                client.PutBucket(request);
+                S3Client.PutBucket(request);
             }
             catch (AmazonS3Exception amazonS3Exception)
             {
@@ -129,9 +129,9 @@ namespace AWSS3Access
                 };
 
                 request.Metadata.Add("title", "the title");
-                PutObjectResponse response = client.PutObject(request);
+                PutObjectResponse response = S3Client.PutObject(request);
 
-                client.PutObject(request);
+                S3Client.PutObject(request);
                 result = true;
             }
             catch (AmazonS3Exception amazonS3Exception)
@@ -169,7 +169,7 @@ namespace AWSS3Access
                     ContentBody = "This is sample content..."
                 };
 
-                PutObjectResponse response = client.PutObject(request);
+                PutObjectResponse response = S3Client.PutObject(request);
                 Console.WriteLine("Finished PutObject operation for {0}.", request.Key);
                 Console.WriteLine("Service Response:");
                 Console.WriteLine("-----------------");
@@ -177,7 +177,7 @@ namespace AWSS3Access
                 Console.Write("\n\n");
 
                 request.Key = "Item1";
-                asyncResult = client.BeginPutObject(request, null, null);
+                asyncResult = S3Client.BeginPutObject(request, null, null);
                 while (!asyncResult.IsCompleted)
                 {
                     //
@@ -185,7 +185,7 @@ namespace AWSS3Access
                     //
                 }
             
-                response = client.EndPutObject(asyncResult);
+                response = S3Client.EndPutObject(asyncResult);
                 
                 Console.WriteLine("Finished Async PutObject operation for {0}.", request.Key);
                 Console.WriteLine("Service Response:");
@@ -194,14 +194,14 @@ namespace AWSS3Access
                 Console.Write("\n\n");
 
                 request.Key = "Item2";
-                asyncResult = client.BeginPutObject(request, AsyncCallback.SimpleCallback, null);
+                asyncResult = S3Client.BeginPutObject(request, AsyncCallback.SimpleCallback, null);
 
                 request.Key = "Item3";
-                asyncResult = client.BeginPutObject(request, AsyncCallback.CallbackWithClient, client);
+                asyncResult = S3Client.BeginPutObject(request, AsyncCallback.CallbackWithClient, S3Client);
 
                 request.Key = "Item4";
-                asyncResult = client.BeginPutObject(request, AsyncCallback.CallbackWithState,
-                   new ClientState { Client = (AmazonS3Client)client, Start = DateTime.Now });
+                asyncResult = S3Client.BeginPutObject(request, AsyncCallback.CallbackWithState,
+                   new ClientState { Client = (AmazonS3Client)S3Client, Start = DateTime.Now });
 
                 Thread.Sleep(TimeSpan.FromSeconds(5));
                 result = true;
@@ -273,7 +273,7 @@ namespace AWSS3Access
                         Key = keyName
                     };
 
-                    using (GetObjectResponse response = client.GetObject(request))
+                    using (GetObjectResponse response = S3Client.GetObject(request))
                     {
                         using (Stream responseStream = response.ResponseStream)
                         {
@@ -315,7 +315,7 @@ namespace AWSS3Access
                     Key = keyName
                 };
 
-                client.DeleteObject(request);
+                S3Client.DeleteObject(request);
             }
             catch (AmazonS3Exception amazonS3Exception)
             {
@@ -343,7 +343,7 @@ namespace AWSS3Access
             {
                 ListObjectsRequest request = new ListObjectsRequest();
                 request.BucketName = bucketName;
-                ListObjectsResponse response = client.ListObjects(request);
+                ListObjectsResponse response = S3Client.ListObjects(request);
                 foreach (S3Object entry in response.S3Objects)
                 {
                     Console.WriteLine("key = {0} size = {1}", entry.Key, entry.Size);
